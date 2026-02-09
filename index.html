@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROW Feature Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 { color: #0079c1; }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .param { color: #d73a49; }
+        .value { color: #22863a; }
+    </style>
+</head>
+<body>
+    <h1>PROW Feature Report Generator</h1>
+    <p>This page generates printable PDF reports for Public Right-of-Way (PROW) accessibility assessment features.</p>
+
+    <h2>Usage</h2>
+    <p>Access the report page with URL parameters:</p>
+    <pre>print_feature.html?<span class="param">service</span>=<span class="value">&lt;feature_service_url&gt;</span>&amp;<span class="param">layer</span>=<span class="value">sidewalks</span>&amp;<span class="param">oid</span>=<span class="value">123</span></pre>
+
+    <h2>Required Parameters</h2>
+    <ul>
+        <li><code>oid</code> - The OBJECTID of the feature to display</li>
+    </ul>
+
+    <h2>Optional Parameters</h2>
+    <ul>
+        <li><code>service</code> - Feature service URL (defaults to NWMCC service)</li>
+        <li><code>layer</code> - Layer type: sidewalks, crosswalks, curbramps, barriers (default: sidewalks)</li>
+        <li><code>layerIndex</code> - Override the layer index in the feature service</li>
+        <li><code>idField</code> - Override the ID field name (e.g., segment_id, c_path_id)</li>
+        <li><code>title</code> - Custom report subtitle</li>
+        <li><code>autoprint</code> - Set to "true" to auto-open print dialog</li>
+    </ul>
+
+    <h2>Example</h2>
+    <pre>print_feature.html?service=https://services.arcgis.com/.../FeatureServer&amp;layer=sidewalks&amp;oid=456&amp;title=City%20of%20Example&amp;autoprint=true</pre>
+
+    <p><a href="print_feature.html?layer=sidewalks&oid=1">Test with default service (OBJECTID 1)</a></p>
+</body>
+</html>
