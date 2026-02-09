@@ -325,19 +325,29 @@
             const layerIndex = urlParams.layerIndex !== null ? urlParams.layerIndex : config.index;
             const url = `${serviceUrl}/${layerIndex}/query`;
 
+            console.log('Fetching feature:', { serviceUrl, layerIndex, oid, url });
+
             const params = new URLSearchParams({
                 where: `OBJECTID = ${oid}`,
                 outFields: '*',
                 f: 'json'
             });
 
-            const response = await fetch(`${url}?${params}`);
+            const fullUrl = `${url}?${params}`;
+            console.log('Full query URL:', fullUrl);
+
+            const response = await fetch(fullUrl);
             const data = await response.json();
+            console.log('Query response:', data);
+
+            if (data.error) {
+                throw new Error(`Service error: ${data.error.message || JSON.stringify(data.error)}`);
+            }
 
             if (data.features && data.features.length > 0) {
                 return data.features[0];
             }
-            throw new Error('Feature not found');
+            throw new Error(`Feature not found (OID=${oid}, Layer=${layerIndex})`);
         }
 
         // Fetch attachments
