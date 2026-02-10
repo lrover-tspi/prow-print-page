@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NWMCC Work Status Update</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            background: white;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .status-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .status-btn {
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: #4a5568;
+        }
+
+        .status-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .status-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .message.info {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+
+        .feature-info {
+            background: #f7fafc;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .feature-info h3 {
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .feature-info p {
+            color: #4a5568;
+            font-size: 14px;
+            margin: 4px 0;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            display: none;
+        }
+
+        .hint {
+            color: #718096;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Work Status Update</h1>
+        <p class="subtitle">Update work status for NWMCC sidewalks, crosswalks, and curb ramps</p>
+
+        <div id="message" class="message"></div>
+        <div id="featureInfo" class="feature-info"></div>
+        <div id="loading" class="loading">Searching...</div>
+
+        <form id="updateForm">
+            <div class="form-group">
+                <label for="layerType">Layer Type</label>
+                <select id="layerType" required>
+                    <option value="">Select layer type...</option>
+                    <option value="0">Sidewalks</option>
+                    <option value="1">Crosswalks</option>
+                    <option value="2">Curb Ramps</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="featureId">Feature ID</label>
+                <input type="text" id="featureId" placeholder="Enter segment_id or c_path_id" required>
+                <p class="hint">For Sidewalks/Crosswalks: use segment_id | For Curb Ramps: use c_path_id</p>
+            </div>
+
+            <div class="form-group">
+                <label>Work Status</label>
+                <div class="status-buttons">
+                    <button type="button" class="status-btn" data-value="In Progress">
+                        🔧 In Progress
+                    </button>
+                    <button type="button" class="status-btn" data-value="Complete">
+                        ✅ Complete
+                    </button>
+                </div>
+                <input type="hidden" id="workStatus" required>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Update Status
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const FEATURE_SERVICE_URL = 'https://services7.arcgis.com/1BCkIsgMdnLQ51n3/arcgis/rest/services/NWMCC_Sidewalk_Data_TSPI_Copy_/FeatureServer';
+
+        let selectedFeature = null;
+        let selectedStatus = null;
+
+        // Parse URL parameters and pre-fill form
+        function initializeFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const layer = params.get('layer');
+            const id = params.get('id');
+
+            if (layer) {
+                document.getElementById('layerType').value = layer;
+            }
+
+            if (id) {
+                document.getElementById('featureId').value = id;
+                // Auto-search if both layer and id are provided
+                if (layer) {
+                    setTimeout(searchFeature, 500);
+                }
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', initializeFromURL);
+
+        // Status button selection
+        document.querySelectorAll('.status-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedStatus = this.dataset.value;
+                document.getElementById('workStatus').value = selectedStatus;
+            });
+        });
+
+        // Search for feature when ID is entered
+        document.getElementById('featureId').addEventListener('blur', searchFeature);
+        document.getElementById('layerType').addEventListener('change', function() {
+            if (document.getElementById('featureId').value) {
+                searchFeature();
+            }
+        });
+
+        async function searchFeature() {
+            const layerIndex = document.getElementById('layerType').value;
+            const featureId = document.getElementById('featureId').value.trim();
+
+            if (!layerIndex || !featureId) return;
+
+            const fieldName = layerIndex === '2' ? 'c_path_id' : 'segment_id';
+            const layerUrl = `${FEATURE_SERVICE_URL}/${layerIndex}`;
+
+            showLoading(true);
+            hideMessage();
+            hideFeatureInfo();
+
+            try {
+                const params = new URLSearchParams({
+                    where: `${fieldName} = '${featureId}'`,
+                    outFields: 'OBJECTID,segment_id,c_path_id,PROWAG_COMPLIANT,DCS_SCORE,work_status',
+                    returnGeometry: false,
+                    f: 'json'
+                });
+
+                const response = await fetch(`${layerUrl}/query?${params}`);
+                const data = await response.json();
+
+                if (data.features && data.features.length > 0) {
+                    selectedFeature = data.features[0];
+                    showFeatureInfo(selectedFeature.attributes, layerIndex);
+                    showMessage('Feature found! Select status and submit.', 'info');
+                } else {
+                    selectedFeature = null;
+                    showMessage(`No feature found with ${fieldName} = "${featureId}"`, 'error');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showMessage('Error searching for feature. Please try again.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Form submission
+        document.getElementById('updateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!selectedFeature) {
+                showMessage('Please search for a valid feature first', 'error');
+                return;
+            }
+
+            if (!selectedStatus) {
+                showMessage('Please select a work status', 'error');
+                return;
+            }
+
+            const layerIndex = document.getElementById('layerType').value;
+            const layerUrl = `${FEATURE_SERVICE_URL}/${layerIndex}`;
+
+            document.getElementById('submitBtn').disabled = true;
+            showMessage('Updating feature...', 'info');
+
+            try {
+                const updates = [{
+                    attributes: {
+                        OBJECTID: selectedFeature.attributes.OBJECTID,
+                        work_status: selectedStatus,
+                        work_status_date: new Date().getTime()
+                    }
+                }];
+
+                const formData = new FormData();
+                formData.append('features', JSON.stringify(updates));
+                formData.append('f', 'json');
+
+                const response = await fetch(`${layerUrl}/updateFeatures`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.updateResults && result.updateResults[0].success) {
+                    showMessage('✓ Status updated successfully!', 'success');
+
+                    // Reset form after 2 seconds
+                    setTimeout(() => {
+                        document.getElementById('updateForm').reset();
+                        selectedFeature = null;
+                        selectedStatus = null;
+                        document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+                        hideFeatureInfo();
+                        hideMessage();
+                    }, 2000);
+                } else {
+                    const errorMsg = result.updateResults?.[0]?.error?.description || 'Unknown error';
+                    showMessage(`Failed to update: ${errorMsg}`, 'error');
+                }
+            } catch (error) {
+                console.error('Update error:', error);
+                showMessage('Error updating feature. Please try again.', 'error');
+            } finally {
+                document.getElementById('submitBtn').disabled = false;
+            }
+        });
+
+        function showFeatureInfo(attributes, layerIndex) {
+            const info = document.getElementById('featureInfo');
+            const idField = layerIndex === '2' ? attributes.c_path_id : attributes.segment_id;
+            const compliance = attributes.PROWAG_COMPLIANT === 1 ? 'Compliant' : 'Non-Compliant';
+            const score = attributes.DCS_SCORE ? attributes.DCS_SCORE.toFixed(1) : 'N/A';
+            const currentStatus = attributes.work_status || 'Not set';
+
+            info.innerHTML = `
+                <h3>Feature Details</h3>
+                <p><strong>ID:</strong> ${idField}</p>
+                <p><strong>PROWAG Status:</strong> ${compliance}</p>
+                <p><strong>DCS Score:</strong> ${score}</p>
+                <p><strong>Current Work Status:</strong> ${currentStatus}</p>
+            `;
+            info.style.display = 'block';
+        }
+
+        function hideFeatureInfo() {
+            document.getElementById('featureInfo').style.display = 'none';
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>
