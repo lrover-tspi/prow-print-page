@@ -288,8 +288,13 @@
             hideFeatureInfo();
 
             try {
+                // segment_id is numeric, c_path_id might be text - handle both
+                const whereClause = fieldName === 'segment_id'
+                    ? `${fieldName} = ${featureId}`  // No quotes for numeric
+                    : `${fieldName} = '${featureId}'`;  // Quotes for text
+
                 const params = new URLSearchParams({
-                    where: `${fieldName} = '${featureId}'`,
+                    where: whereClause,
                     outFields: 'OBJECTID,segment_id,c_path_id,PROWAG_COMPLIANT,DCS_SCORE,work_status',
                     returnGeometry: false,
                     f: 'json'
