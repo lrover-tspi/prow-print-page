@@ -82,6 +82,19 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .section-header:hover {
+            opacity: 0.9;
+        }
+        .section-header .collapse-icon {
+            margin-left: auto;
+            font-size: 14px;
+            transition: transform 0.3s;
+        }
+        .section-header.collapsed .collapse-icon {
+            transform: rotate(-90deg);
         }
         .section-header.unassigned {
             background: #f8f9fa;
@@ -263,25 +276,28 @@
             </div>
 
             <div id="unassigned-section" class="work-status-section">
-                <div class="section-header unassigned">
+                <div class="section-header unassigned" onclick="toggleSection('unassigned')">
                     📋 UNASSIGNED (No Work Status)
-                    <span id="unassigned-header-count" style="margin-left: auto; font-weight: normal;"></span>
+                    <span id="unassigned-header-count" style="font-weight: normal;"></span>
+                    <span class="collapse-icon">▼</span>
                 </div>
                 <div id="unassigned-content"></div>
             </div>
 
             <div id="in-progress-section" class="work-status-section">
-                <div class="section-header in-progress">
+                <div class="section-header in-progress" onclick="toggleSection('in-progress')">
                     🔧 IN PROGRESS
-                    <span id="in-progress-header-count" style="margin-left: auto; font-weight: normal;"></span>
+                    <span id="in-progress-header-count" style="font-weight: normal;"></span>
+                    <span class="collapse-icon">▼</span>
                 </div>
                 <div id="in-progress-content"></div>
             </div>
 
             <div id="complete-section" class="work-status-section">
-                <div class="section-header complete">
+                <div class="section-header complete" onclick="toggleSection('complete')">
                     ✅ COMPLETE
-                    <span id="complete-header-count" style="margin-left: auto; font-weight: normal;"></span>
+                    <span id="complete-header-count" style="font-weight: normal;"></span>
+                    <span class="collapse-icon">▼</span>
                 </div>
                 <div id="complete-content"></div>
             </div>
@@ -549,6 +565,20 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
                 document.getElementById('error-message').textContent = error.message;
+            }
+        }
+
+        // Toggle section expand/collapse
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const header = document.querySelector(`#${sectionId}-section .section-header`);
+
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                header.classList.remove('collapsed');
+            } else {
+                content.style.display = 'none';
+                header.classList.add('collapsed');
             }
         }
 
