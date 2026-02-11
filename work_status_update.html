@@ -181,6 +181,104 @@
             font-size: 13px;
             margin-top: 4px;
         }
+
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #e53e3e;
+            border: 2px solid #e53e3e;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .reset-btn:hover:not(:disabled) {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .reset-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            color: #2d3748;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .modal-body {
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-cancel {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #cbd5e0;
+        }
+
+        .modal-btn-confirm {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #c53030;
+        }
     </style>
 </head>
 <body>
@@ -225,7 +323,25 @@
             <button type="submit" class="submit-btn" id="submitBtn">
                 Update Status
             </button>
+
+            <button type="button" class="reset-btn" id="resetBtn" disabled>
+                🔄 Reset Status to Blank
+            </button>
         </form>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Reset Work Status?</div>
+            <div class="modal-body">
+                Are you sure you want to reset the work status to blank? This will clear both the status and date fields.
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmReset()">Reset Status</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -312,8 +428,10 @@
                     selectedFeature = data.features[0];
                     showFeatureInfo(selectedFeature.attributes, layerIndex);
                     showMessage('Feature found! Select status and submit.', 'info');
+                    enableResetButton();
                 } else {
                     selectedFeature = null;
+                    document.getElementById('resetBtn').disabled = true;
                     showMessage(`No feature found with ${fieldName} = "${featureId}"`, 'error');
                 }
             } catch (error) {
@@ -422,6 +540,93 @@
 
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Enable reset button when feature is found
+        function enableResetButton() {
+            if (selectedFeature) {
+                document.getElementById('resetBtn').disabled = false;
+            }
+        }
+
+        // Show confirmation modal
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            if (selectedFeature) {
+                document.getElementById('confirmModal').classList.add('show');
+            }
+        });
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('confirmModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Confirm reset action
+        async function confirmReset() {
+            closeModal();
+
+            if (!selectedFeature) {
+                showMessage('No feature selected', 'error');
+                return;
+            }
+
+            const layerIndex = document.getElementById('layerType').value;
+            const layerUrl = `${FEATURE_SERVICE_URL}/${layerIndex}`;
+
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('resetBtn').disabled = true;
+            showMessage('Resetting status...', 'info');
+
+            try {
+                const updates = [{
+                    attributes: {
+                        OBJECTID: selectedFeature.attributes.OBJECTID,
+                        work_status: null,
+                        work_status_date: null
+                    }
+                }];
+
+                const formData = new FormData();
+                formData.append('features', JSON.stringify(updates));
+                formData.append('f', 'json');
+
+                const response = await fetch(`${layerUrl}/updateFeatures`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.updateResults && result.updateResults[0].success) {
+                    showMessage('✓ Status reset successfully!', 'success');
+
+                    // Update displayed feature info
+                    selectedFeature.attributes.work_status = null;
+                    selectedFeature.attributes.work_status_date = null;
+                    showFeatureInfo(selectedFeature.attributes, layerIndex);
+
+                    // Clear status button selection
+                    selectedStatus = null;
+                    document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+                    document.getElementById('workStatus').value = '';
+                } else {
+                    const errorMsg = result.updateResults?.[0]?.error?.description || 'Unknown error';
+                    showMessage(`Failed to reset: ${errorMsg}`, 'error');
+                }
+            } catch (error) {
+                console.error('Reset error:', error);
+                showMessage('Error resetting status. Please try again.', 'error');
+            } finally {
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('resetBtn').disabled = false;
+            }
         }
     </script>
 </body>
