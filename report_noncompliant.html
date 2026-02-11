@@ -240,7 +240,7 @@
     <div class="report-container">
         <div id="loading" class="loading">
             Loading report data...<br>
-            <small>Querying feature service for non-compliant items</small>
+            <small>Querying feature service for all non-compliant items</small>
         </div>
 
         <div id="content" style="display: none;">
@@ -315,7 +315,7 @@
 
     <script>
         const FEATURE_SERVICE_URL = 'https://services7.arcgis.com/1BCkIsgMdnLQ51n3/arcgis/rest/services/NWMCC_Sidewalk_Data_TSPI_Copy_/FeatureServer';
-        const MAX_ITEMS_PER_LAYER = 500;
+        // No feature limit - fetch all non-compliant items
 
         const LAYERS = [
             { name: 'Sidewalks', index: 0, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date' },
@@ -394,7 +394,6 @@
                 outFields: layer.fields,
                 returnGeometry: false,
                 orderByFields: 'DCS_SCORE ASC',
-                resultRecordCount: MAX_ITEMS_PER_LAYER,
                 f: 'json'
             });
 
@@ -456,6 +455,7 @@
 
             const tbody = document.getElementById(`${containerId}-${layer.name}-tbody`);
 
+            // Render all rows immediately with photo placeholders
             for (const feature of features) {
                 const attrs = feature.attributes;
                 const oid = attrs.OBJECTID;
@@ -466,21 +466,13 @@
                 const factors = getNonCompliantFactors(attrs, layer.name);
                 const workDate = attrs.work_status_date ? new Date(attrs.work_status_date).toLocaleDateString() : '-';
 
-                // Fetch attachment
-                const attachments = await fetchAttachments(layer.index, oid);
-                const photoHtml = attachments.length > 0
-                    ? `<a href="${getAttachmentUrl(layer.index, oid, attachments[0].id)}" target="_blank">
-                         <img src="${getAttachmentUrl(layer.index, oid, attachments[0].id)}" class="photo-thumb" alt="Photo">
-                       </a>`
-                    : '<div class="no-photo">No Photo</div>';
-
                 const issuesHtml = factors.length > 0
                     ? '<ul class="issues-list">' + factors.map(f => `<li>${f}</li>`).join('') + '</ul>'
                     : '<span style="color: #999;">-</span>';
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${photoHtml}</td>
+                    <td id="photo-${layer.index}-${oid}"><div class="no-photo">Loading...</div></td>
                     <td><strong>${id}</strong></td>
                     <td>
                         <span class="dcs-badge ${dcsClass}">
@@ -494,6 +486,20 @@
                     <td>${workDate}</td>
                 `;
                 tbody.appendChild(row);
+
+                // Load photo asynchronously (non-blocking)
+                fetchAttachments(layer.index, oid).then(attachments => {
+                    const photoCell = document.getElementById(`photo-${layer.index}-${oid}`);
+                    if (photoCell) {
+                        if (attachments.length > 0) {
+                            photoCell.innerHTML = `<a href="${getAttachmentUrl(layer.index, oid, attachments[0].id)}" target="_blank">
+                                <img src="${getAttachmentUrl(layer.index, oid, attachments[0].id)}" class="photo-thumb" alt="Photo">
+                            </a>`;
+                        } else {
+                            photoCell.innerHTML = '<div class="no-photo">No Photo</div>';
+                        }
+                    }
+                });
             }
         }
 
