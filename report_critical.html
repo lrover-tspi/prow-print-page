@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NWMCC Critical Items Report</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .report-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #e60000;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 28px;
+        }
+        .header .subtitle {
+            color: #666;
+            margin-top: 5px;
+        }
+        .summary {
+            background: #fee;
+            border-left: 4px solid #e60000;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .summary h3 {
+            margin: 0 0 10px 0;
+            color: #c00;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .stat-box {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #fcc;
+        }
+        .stat-box .label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #c00;
+            margin-top: 5px;
+        }
+        .work-status-section {
+            margin: 30px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-header.unassigned {
+            background: #f8f9fa;
+            color: #495057;
+        }
+        .section-header.in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .section-header.complete {
+            background: #d4edda;
+            color: #155724;
+        }
+        .layer-group {
+            border-top: 2px solid #e9ecef;
+            padding: 20px;
+        }
+        .layer-title {
+            color: #0079c1;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .items-table th {
+            background: #f8f9fa;
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .items-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 13px;
+        }
+        .items-table tr:hover {
+            background: #f8f9fa;
+        }
+        .photo-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .photo-thumb:hover {
+            opacity: 0.8;
+        }
+        .no-photo {
+            width: 60px;
+            height: 60px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #999;
+        }
+        .dcs-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .dcs-critical { background: #f8d7da; color: #721c24; }
+        .prowag-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .prowag-non-compliant {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .issues-list {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .issues-list li {
+            margin: 3px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            font-size: 18px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .print-button {
+            background: #0079c1;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .print-button:hover {
+            background: #005a8c;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .report-container {
+                box-shadow: none;
+                padding: 0;
+            }
+            .print-button {
+                display: none;
+            }
+            .photo-thumb {
+                width: 40px;
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div id="loading" class="loading">
+            Loading report data...<br>
+            <small>Querying feature service for critical items (DCS &lt; 50)</small>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="header">
+                <h1>⚠️ Critical Items Report (Top 50 Worst)</h1>
+                <div class="subtitle">NWMCC Sidewalk Accessibility Assessment</div>
+                <div class="subtitle">Features with DCS Score below 50 (Critical severity)</div>
+            </div>
+
+            <div class="summary">
+                <h3>Report Summary</h3>
+                <div id="report-date"></div>
+                <div class="summary-stats">
+                    <div class="stat-box">
+                        <div class="label">Total Items</div>
+                        <div class="value" id="total-count">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Unassigned</div>
+                        <div class="value" id="unassigned-count">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">In Progress</div>
+                        <div class="value" id="in-progress-count">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Complete</div>
+                        <div class="value" id="complete-count">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="unassigned-section" class="work-status-section">
+                <div class="section-header unassigned">
+                    📋 UNASSIGNED (No Work Status)
+                    <span id="unassigned-header-count" style="margin-left: auto; font-weight: normal;"></span>
+                </div>
+                <div id="unassigned-content"></div>
+            </div>
+
+            <div id="in-progress-section" class="work-status-section">
+                <div class="section-header in-progress">
+                    🔧 IN PROGRESS
+                    <span id="in-progress-header-count" style="margin-left: auto; font-weight: normal;"></span>
+                </div>
+                <div id="in-progress-content"></div>
+            </div>
+
+            <div id="complete-section" class="work-status-section">
+                <div class="section-header complete">
+                    ✅ COMPLETE
+                    <span id="complete-header-count" style="margin-left: auto; font-weight: normal;"></span>
+                </div>
+                <div id="complete-content"></div>
+            </div>
+
+            <div class="no-print" style="text-align: center;">
+                <button class="print-button" onclick="window.print()">
+                    Print / Save as PDF
+                </button>
+            </div>
+
+            <div class="footer">
+                <div>PROWAG Accessibility Assessment | Northwest Mississippi Community College</div>
+            </div>
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            <strong>Error:</strong> <span id="error-message"></span>
+        </div>
+    </div>
+
+    <script>
+        const FEATURE_SERVICE_URL = 'https://services7.arcgis.com/1BCkIsgMdnLQ51n3/arcgis/rest/services/NWMCC_Sidewalk_Data_TSPI_Copy_/FeatureServer';
+        const MAX_ITEMS_PER_LAYER = 50; // Top 50 worst
+
+        const LAYERS = [
+            { name: 'Sidewalks', index: 0, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date' },
+            { name: 'Crosswalks', index: 1, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date' },
+            { name: 'Curb Ramps', index: 2, idField: 'c_path_id', fields: 'OBJECTID,c_path_id,DCS_SCORE,PROWAG_COMPLIANT,PROWAG_COMPLIANT_LOG,work_status,work_status_date' }
+        ];
+
+        function getNonCompliantFactors(attrs, layerName) {
+            const factors = [];
+            if (layerName === 'Sidewalks' || layerName === 'Crosswalks') {
+                if (attrs.TRAVEL_PATH_WIDTH !== null && attrs.TRAVEL_PATH_WIDTH < 36) {
+                    factors.push(`Travel Path Width: ${attrs.TRAVEL_PATH_WIDTH.toFixed(1)} in (min 36 in)`);
+                }
+                if (attrs.RUN_SLOPE !== null && Math.abs(attrs.RUN_SLOPE) > 5) {
+                    factors.push(`Running Slope: ${Math.abs(attrs.RUN_SLOPE).toFixed(1)}% (max 5.0%)`);
+                }
+                if (attrs.X_SLOPE !== null && Math.abs(attrs.X_SLOPE) > 2) {
+                    factors.push(`Cross Slope: ${Math.abs(attrs.X_SLOPE).toFixed(1)}% (max 2.0%)`);
+                }
+                if (attrs.VERT_OFFSET !== null && Math.abs(attrs.VERT_OFFSET) > 0.25) {
+                    factors.push(`Vertical Displacement: ${Math.abs(attrs.VERT_OFFSET).toFixed(2)} in (max 0.25 in)`);
+                }
+            } else if (layerName === 'Curb Ramps') {
+                const log = attrs.PROWAG_COMPLIANT_LOG || '';
+                const lines = log.split('\n');
+                for (const line of lines) {
+                    if (line.toLowerCase().includes('score: false') && line.includes('Final ')) {
+                        const start = line.indexOf('Final ') + 6;
+                        const end = line.indexOf(' score:');
+                        if (start > 5 && end > start) {
+                            factors.push(line.substring(start, end));
+                        }
+                    }
+                }
+            }
+            return factors;
+        }
+
+        async function fetchAttachments(layerIndex, oid) {
+            try {
+                const url = `${FEATURE_SERVICE_URL}/${layerIndex}/${oid}/attachments`;
+                const params = new URLSearchParams({ f: 'json' });
+                const response = await fetch(`${url}?${params}`);
+                const data = await response.json();
+                return data.attachmentInfos || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function getAttachmentUrl(layerIndex, oid, attachmentId) {
+            return `${FEATURE_SERVICE_URL}/${layerIndex}/${oid}/attachments/${attachmentId}`;
+        }
+
+        async function fetchLayerData(layer) {
+            const url = `${FEATURE_SERVICE_URL}/${layer.index}/query`;
+            const params = new URLSearchParams({
+                where: 'DCS_SCORE < 50 AND (PROWAG_COMPLIANT <> 1 OR PROWAG_COMPLIANT IS NULL)',
+                outFields: layer.fields,
+                returnGeometry: false,
+                orderByFields: 'DCS_SCORE ASC',
+                resultRecordCount: MAX_ITEMS_PER_LAYER,
+                f: 'json'
+            });
+
+            const response = await fetch(`${url}?${params}`);
+            const data = await response.json();
+            return data.features || [];
+        }
+
+        function groupByWorkStatus(features) {
+            const groups = {
+                unassigned: [],
+                'in-progress': [],
+                complete: []
+            };
+
+            for (const feature of features) {
+                const status = feature.attributes.work_status;
+                if (status === 'In Progress') {
+                    groups['in-progress'].push(feature);
+                } else if (status === 'Complete') {
+                    groups.complete.push(feature);
+                } else {
+                    groups.unassigned.push(feature);
+                }
+            }
+
+            return groups;
+        }
+
+        async function renderLayerGroup(layer, features, containerId) {
+            if (features.length === 0) return;
+
+            const container = document.getElementById(containerId);
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'layer-group';
+
+            const title = document.createElement('div');
+            title.className = 'layer-title';
+            title.innerHTML = `${layer.name} <span style="font-weight: normal; color: #666;">(${features.length} items)</span>`;
+            groupDiv.appendChild(title);
+
+            const table = document.createElement('table');
+            table.className = 'items-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Photo</th>
+                        <th>ID</th>
+                        <th>DCS Score</th>
+                        <th>Status</th>
+                        <th>Issues</th>
+                        <th>Work Date</th>
+                    </tr>
+                </thead>
+                <tbody id="${containerId}-${layer.name}-tbody"></tbody>
+            `;
+            groupDiv.appendChild(table);
+            container.appendChild(groupDiv);
+
+            const tbody = document.getElementById(`${containerId}-${layer.name}-tbody`);
+
+            for (const feature of features) {
+                const attrs = feature.attributes;
+                const oid = attrs.OBJECTID;
+                const id = attrs[layer.idField];
+                const dcs = attrs.DCS_SCORE;
+                const factors = getNonCompliantFactors(attrs, layer.name);
+                const workDate = attrs.work_status_date ? new Date(attrs.work_status_date).toLocaleDateString() : '-';
+
+                // Fetch attachment
+                const attachments = await fetchAttachments(layer.index, oid);
+                const photoHtml = attachments.length > 0
+                    ? `<a href="${getAttachmentUrl(layer.index, oid, attachments[0].id)}" target="_blank">
+                         <img src="${getAttachmentUrl(layer.index, oid, attachments[0].id)}" class="photo-thumb" alt="Photo">
+                       </a>`
+                    : '<div class="no-photo">No Photo</div>';
+
+                const issuesHtml = factors.length > 0
+                    ? '<ul class="issues-list">' + factors.map(f => `<li>${f}</li>`).join('') + '</ul>'
+                    : '<span style="color: #999;">-</span>';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${photoHtml}</td>
+                    <td><strong>${id}</strong></td>
+                    <td>
+                        <span class="dcs-badge dcs-critical">
+                            ${dcs !== null ? dcs.toFixed(1) : 'N/A'} (Critical)
+                        </span>
+                    </td>
+                    <td>
+                        <span class="prowag-status prowag-non-compliant">Non-Compliant</span>
+                    </td>
+                    <td>${issuesHtml}</td>
+                    <td>${workDate}</td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        async function generateReport() {
+            try {
+                let totalCount = 0;
+                let unassignedCount = 0;
+                let inProgressCount = 0;
+                let completeCount = 0;
+
+                const allGroups = {
+                    unassigned: {},
+                    'in-progress': {},
+                    complete: {}
+                };
+
+                // Fetch all layer data
+                for (const layer of LAYERS) {
+                    console.log(`Fetching ${layer.name}...`);
+                    const features = await fetchLayerData(layer);
+                    const groups = groupByWorkStatus(features);
+
+                    allGroups.unassigned[layer.name] = { layer, features: groups.unassigned };
+                    allGroups['in-progress'][layer.name] = { layer, features: groups['in-progress'] };
+                    allGroups.complete[layer.name] = { layer, features: groups.complete };
+
+                    totalCount += features.length;
+                    unassignedCount += groups.unassigned.length;
+                    inProgressCount += groups['in-progress'].length;
+                    completeCount += groups.complete.length;
+                }
+
+                // Update summary
+                document.getElementById('total-count').textContent = totalCount;
+                document.getElementById('unassigned-count').textContent = unassignedCount;
+                document.getElementById('in-progress-count').textContent = inProgressCount;
+                document.getElementById('complete-count').textContent = completeCount;
+                document.getElementById('unassigned-header-count').textContent = `${unassignedCount} items`;
+                document.getElementById('in-progress-header-count').textContent = `${inProgressCount} items`;
+                document.getElementById('complete-header-count').textContent = `${completeCount} items`;
+
+                const now = new Date();
+                document.getElementById('report-date').textContent = `Generated: ${now.toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                })} at ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+
+                // Render each group
+                for (const layer of LAYERS) {
+                    await renderLayerGroup(layer, allGroups.unassigned[layer.name].features, 'unassigned-content');
+                    await renderLayerGroup(layer, allGroups['in-progress'][layer.name].features, 'in-progress-content');
+                    await renderLayerGroup(layer, allGroups.complete[layer.name].features, 'complete-content');
+                }
+
+                // Show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error generating report:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+
+        // Run on load
+        window.addEventListener('DOMContentLoaded', generateReport);
+    </script>
+</body>
+</html>
