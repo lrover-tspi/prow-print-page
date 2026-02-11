@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NWMCC Work Status Update</title>
-    <!-- Version 1.1: Fixed numeric segment_id query -->
     <style>
         * {
             margin: 0;
@@ -289,14 +288,19 @@
             hideFeatureInfo();
 
             try {
-                // segment_id is numeric, c_path_id might be text - handle both
+                // segment_id is numeric, c_path_id is text - handle both
                 const whereClause = fieldName === 'segment_id'
                     ? `${fieldName} = ${featureId}`  // No quotes for numeric
                     : `${fieldName} = '${featureId}'`;  // Quotes for text
 
+                // Request appropriate fields based on layer
+                const outFields = layerIndex === '2'
+                    ? 'OBJECTID,c_path_id,PROWAG_COMPLIANT,DCS_SCORE,work_status'
+                    : 'OBJECTID,segment_id,PROWAG_COMPLIANT,DCS_SCORE,work_status';
+
                 const params = new URLSearchParams({
                     where: whereClause,
-                    outFields: 'OBJECTID,segment_id,c_path_id,PROWAG_COMPLIANT,DCS_SCORE,work_status',
+                    outFields: outFields,
                     returnGeometry: false,
                     f: 'json'
                 });
