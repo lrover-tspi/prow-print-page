@@ -394,17 +394,37 @@
 
         async function fetchLayerData(layer) {
             const url = `${FEATURE_SERVICE_URL}/${layer.index}/query`;
-            const params = new URLSearchParams({
-                where: 'PROWAG_COMPLIANT <> 1 OR PROWAG_COMPLIANT IS NULL',
-                outFields: layer.fields,
-                returnGeometry: false,
-                orderByFields: 'DCS_SCORE ASC',
-                f: 'json'
-            });
+            let allFeatures = [];
+            let offset = 0;
+            const batchSize = 1000; // Fetch 1000 records at a time
+            let hasMore = true;
 
-            const response = await fetch(`${url}?${params}`);
-            const data = await response.json();
-            return data.features || [];
+            while (hasMore) {
+                const params = new URLSearchParams({
+                    where: 'PROWAG_COMPLIANT <> 1 OR PROWAG_COMPLIANT IS NULL',
+                    outFields: layer.fields,
+                    returnGeometry: false,
+                    orderByFields: 'DCS_SCORE ASC',
+                    resultOffset: offset,
+                    resultRecordCount: batchSize,
+                    f: 'json'
+                });
+
+                const response = await fetch(`${url}?${params}`);
+                const data = await response.json();
+                const features = data.features || [];
+
+                allFeatures = allFeatures.concat(features);
+
+                // Check if there are more records to fetch
+                if (features.length < batchSize) {
+                    hasMore = false;
+                } else {
+                    offset += batchSize;
+                }
+            }
+
+            return allFeatures;
         }
 
         function groupByWorkStatus(features) {
