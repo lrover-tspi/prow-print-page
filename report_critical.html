@@ -108,6 +108,10 @@
             background: #d4edda;
             color: #155724;
         }
+        .section-header.not-applicable {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
         .layer-group {
             border-top: 2px solid #e9ecef;
             padding: 20px;
@@ -269,6 +273,10 @@
                         <div class="label">Complete</div>
                         <div class="value" id="complete-count">0</div>
                     </div>
+                    <div class="stat-box">
+                        <div class="label">Not Applicable</div>
+                        <div class="value" id="not-applicable-count">0</div>
+                    </div>
                 </div>
             </div>
 
@@ -297,6 +305,15 @@
                     <span class="collapse-icon">▼</span>
                 </div>
                 <div id="complete-content"></div>
+            </div>
+
+            <div id="not-applicable-section" class="work-status-section">
+                <div class="section-header not-applicable" onclick="toggleSection('not-applicable')">
+                    ⊘ NOT APPLICABLE
+                    <span id="not-applicable-header-count" style="font-weight: normal;"></span>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div id="not-applicable-content"></div>
             </div>
 
             <div class="no-print" style="text-align: center;">
@@ -411,7 +428,8 @@
             const groups = {
                 unassigned: [],
                 'in-progress': [],
-                complete: []
+                complete: [],
+                'not-applicable': []
             };
 
             for (const feature of features) {
@@ -420,6 +438,8 @@
                     groups['in-progress'].push(feature);
                 } else if (status === 'Complete') {
                     groups.complete.push(feature);
+                } else if (status === 'Not Applicable') {
+                    groups['not-applicable'].push(feature);
                 } else {
                     groups.unassigned.push(feature);
                 }
@@ -510,11 +530,13 @@
                 let unassignedCount = 0;
                 let inProgressCount = 0;
                 let completeCount = 0;
+                let notApplicableCount = 0;
 
                 const allGroups = {
                     unassigned: {},
                     'in-progress': {},
-                    complete: {}
+                    complete: {},
+                    'not-applicable': {}
                 };
 
                 // Fetch all layer data
@@ -526,11 +548,13 @@
                     allGroups.unassigned[layer.name] = { layer, features: groups.unassigned };
                     allGroups['in-progress'][layer.name] = { layer, features: groups['in-progress'] };
                     allGroups.complete[layer.name] = { layer, features: groups.complete };
+                    allGroups['not-applicable'][layer.name] = { layer, features: groups['not-applicable'] };
 
                     totalCount += features.length;
                     unassignedCount += groups.unassigned.length;
                     inProgressCount += groups['in-progress'].length;
                     completeCount += groups.complete.length;
+                    notApplicableCount += groups['not-applicable'].length;
                 }
 
                 // Update summary
@@ -538,9 +562,11 @@
                 document.getElementById('unassigned-count').textContent = unassignedCount;
                 document.getElementById('in-progress-count').textContent = inProgressCount;
                 document.getElementById('complete-count').textContent = completeCount;
+                document.getElementById('not-applicable-count').textContent = notApplicableCount;
                 document.getElementById('unassigned-header-count').textContent = `${unassignedCount} items`;
                 document.getElementById('in-progress-header-count').textContent = `${inProgressCount} items`;
                 document.getElementById('complete-header-count').textContent = `${completeCount} items`;
+                document.getElementById('not-applicable-header-count').textContent = `${notApplicableCount} items`;
 
                 const now = new Date();
                 document.getElementById('report-date').textContent = `Generated: ${now.toLocaleDateString('en-US', {
@@ -552,6 +578,7 @@
                     await renderLayerGroup(layer, allGroups.unassigned[layer.name].features, 'unassigned-content');
                     await renderLayerGroup(layer, allGroups['in-progress'][layer.name].features, 'in-progress-content');
                     await renderLayerGroup(layer, allGroups.complete[layer.name].features, 'complete-content');
+                    await renderLayerGroup(layer, allGroups['not-applicable'][layer.name].features, 'not-applicable-content');
                 }
 
                 // Show content

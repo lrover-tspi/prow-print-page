@@ -71,7 +71,7 @@
 
         .status-buttons {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 12px;
             margin-top: 8px;
         }
@@ -315,6 +315,9 @@
                     </button>
                     <button type="button" class="status-btn" data-value="Complete">
                         ✅ Complete
+                    </button>
+                    <button type="button" class="status-btn" data-value="Not Applicable">
+                        ⊘ Not Applicable
                     </button>
                 </div>
                 <input type="hidden" id="workStatus" required>
