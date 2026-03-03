@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NWMCC Not Applicable Items Report</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .report-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #4a5568;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 28px;
+        }
+        .header .subtitle {
+            color: #666;
+            margin-top: 5px;
+        }
+        .summary {
+            background: #edf2f7;
+            border-left: 4px solid #4a5568;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .summary h3 {
+            margin: 0 0 10px 0;
+            color: #2d3748;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .stat-box {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+        }
+        .stat-box .label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-top: 5px;
+        }
+        .layer-section {
+            margin: 30px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .layer-header {
+            padding: 15px 20px;
+            background: #e2e8f0;
+            color: #2d3748;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .layer-header:hover {
+            opacity: 0.9;
+        }
+        .layer-header .collapse-icon {
+            margin-left: auto;
+            font-size: 14px;
+            transition: transform 0.3s;
+        }
+        .layer-header.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+        .layer-content {
+            padding: 20px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .items-table th {
+            background: #f8f9fa;
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .items-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 13px;
+            vertical-align: top;
+        }
+        .items-table tr:hover {
+            background: #f8f9fa;
+        }
+        .reason-cell {
+            color: #4a5568;
+            font-style: italic;
+            max-width: 350px;
+        }
+        .reason-cell.empty {
+            color: #a0aec0;
+        }
+        .photo-link {
+            color: #0079c1;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .photo-link:hover {
+            text-decoration: underline;
+        }
+        .no-photo {
+            color: #999;
+            font-size: 13px;
+        }
+        .dcs-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .dcs-critical   { background: #f8d7da; color: #721c24; }
+        .dcs-poor       { background: #ffeeba; color: #856404; }
+        .dcs-moderate   { background: #fff3cd; color: #533f03; }
+        .dcs-good       { background: #d4edda; color: #155724; }
+        .dcs-excellent  { background: #c3e6cb; color: #0f4c22; }
+        .dcs-na         { background: #e9ecef; color: #495057; }
+        .prowag-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .prowag-compliant {
+            background: #d4edda;
+            color: #155724;
+        }
+        .prowag-non-compliant {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .date-cell {
+            white-space: nowrap;
+            color: #555;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            font-size: 18px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .empty-state {
+            padding: 30px;
+            text-align: center;
+            color: #718096;
+            font-size: 15px;
+        }
+        .print-button {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .print-button:hover {
+            background: #2d3748;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #0079c1;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover { text-decoration: underline; }
+        @media print {
+            body { background: white; padding: 0; }
+            .report-container { box-shadow: none; padding: 0; }
+            .no-print { display: none !important; }
+            .layer-content { display: block !important; }
+        }
+        .no-print { }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">⊘ Loading Not Applicable report...</div>
+    <div id="content" class="report-container" style="display: none;">
+        <a href="reports.html" class="back-link no-print">← Back to Reports</a>
+        <div class="header">
+            <h1>⊘ Not Applicable Items Report</h1>
+            <div class="subtitle">NWMCC Sidewalk Accessibility Assessment</div>
+            <div class="subtitle">Items marked Not Applicable with justification</div>
+        </div>
+
+        <div class="summary">
+            <h3>Report Summary</h3>
+            <div id="report-date" style="color:#555; font-size:14px; margin-bottom:10px;"></div>
+            <div class="summary-stats">
+                <div class="stat-box">
+                    <div class="label">Total Not Applicable</div>
+                    <div class="value" id="total-count">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Sidewalks</div>
+                    <div class="value" id="sidewalk-count">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Crosswalks</div>
+                    <div class="value" id="crosswalk-count">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Curb Ramps</div>
+                    <div class="value" id="curbramp-count">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sidewalk-section" class="layer-section">
+            <div class="layer-header" onclick="toggleSection('sidewalk')">
+                ⊘ SIDEWALKS
+                <span id="sidewalk-header-count" style="font-weight: normal;"></span>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div id="sidewalk-content" class="layer-content"></div>
+        </div>
+
+        <div id="crosswalk-section" class="layer-section">
+            <div class="layer-header" onclick="toggleSection('crosswalk')">
+                ⊘ CROSSWALKS
+                <span id="crosswalk-header-count" style="font-weight: normal;"></span>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div id="crosswalk-content" class="layer-content"></div>
+        </div>
+
+        <div id="curbramp-section" class="layer-section">
+            <div class="layer-header" onclick="toggleSection('curbramp')">
+                ⊘ CURB RAMPS
+                <span id="curbramp-header-count" style="font-weight: normal;"></span>
+                <span class="collapse-icon">▼</span>
+            </div>
+            <div id="curbramp-content" class="layer-content"></div>
+        </div>
+
+        <div class="no-print" style="text-align: center;">
+            <button class="print-button" onclick="window.print()">
+                Print / Save as PDF
+            </button>
+        </div>
+
+        <div class="footer">
+            <div>PROWAG Accessibility Assessment | Northwest Mississippi Community College</div>
+        </div>
+    </div>
+
+    <div id="error" class="error" style="display: none;">
+        <strong>Error:</strong> <span id="error-message"></span>
+    </div>
+
+    <script>
+        const FEATURE_SERVICE_URL = 'https://services7.arcgis.com/1BCkIsgMdnLQ51n3/arcgis/rest/services/NWMCC_Sidewalk_Data_TSPI_Copy_/FeatureServer';
+
+        const LAYERS = [
+            { index: 0, name: 'Sidewalks',  idField: 'segment_id',  sectionId: 'sidewalk' },
+            { index: 1, name: 'Crosswalks', idField: 'segment_id',  sectionId: 'crosswalk' },
+            { index: 2, name: 'Curb Ramps', idField: 'c_path_id',   sectionId: 'curbramp' },
+        ];
+
+        function toggleSection(sectionId) {
+            const header = document.querySelector(`#${sectionId}-section .layer-header`);
+            const content = document.getElementById(`${sectionId}-content`);
+            header.classList.toggle('collapsed');
+            content.style.display = header.classList.contains('collapsed') ? 'none' : 'block';
+        }
+
+        function getDcsRating(score) {
+            if (score === null || score === undefined) return 'N/A';
+            if (score === 100) return 'Excellent';
+            if (score >= 90)  return 'Good';
+            if (score >= 75)  return 'Moderate';
+            if (score >= 50)  return 'Poor';
+            return 'Critical';
+        }
+
+        function getDcsClass(score) {
+            if (score === null || score === undefined) return 'dcs-na';
+            if (score === 100) return 'dcs-excellent';
+            if (score >= 90)  return 'dcs-good';
+            if (score >= 75)  return 'dcs-moderate';
+            if (score >= 50)  return 'dcs-poor';
+            return 'dcs-critical';
+        }
+
+        async function fetchAttachments(layerIndex, objectId) {
+            try {
+                const url = `${FEATURE_SERVICE_URL}/${layerIndex}/${objectId}/attachments?f=json`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                return data.attachmentInfos || [];
+            } catch { return []; }
+        }
+
+        function getAttachmentUrl(layerIndex, objectId, attachmentId) {
+            return `${FEATURE_SERVICE_URL}/${layerIndex}/${objectId}/attachments/${attachmentId}`;
+        }
+
+        async function fetchNotApplicableFeatures(layer) {
+            const batchSize = 1000;
+            let offset = 0;
+            let hasMore = true;
+            let allFeatures = [];
+
+            while (hasMore) {
+                const outFields = layer.idField === 'c_path_id'
+                    ? `OBJECTID,${layer.idField},PROWAG_COMPLIANT,DCS_SCORE,work_status_date,not_applicable_reason`
+                    : `OBJECTID,${layer.idField},PROWAG_COMPLIANT,DCS_SCORE,work_status_date,not_applicable_reason`;
+
+                const params = new URLSearchParams({
+                    where: "work_status = 'Not Applicable'",
+                    outFields,
+                    orderByFields: layer.idField === 'c_path_id' ? 'c_path_id ASC' : 'segment_id ASC',
+                    resultOffset: offset,
+                    resultRecordCount: batchSize,
+                    returnGeometry: false,
+                    f: 'json'
+                });
+
+                const url = `${FEATURE_SERVICE_URL}/${layer.index}/query?${params}`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                const features = data.features || [];
+                allFeatures = allFeatures.concat(features);
+
+                if (features.length < batchSize) {
+                    hasMore = false;
+                } else {
+                    offset += batchSize;
+                }
+            }
+            return allFeatures;
+        }
+
+        function renderLayerTable(layer, features, containerId) {
+            const container = document.getElementById(containerId);
+
+            if (features.length === 0) {
+                container.innerHTML = '<div class="empty-state">No Not Applicable items for this layer.</div>';
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.className = 'items-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Photo</th>
+                        <th>ID</th>
+                        <th>DCS Score</th>
+                        <th>PROWAG Status</th>
+                        <th>Work Status Update Date</th>
+                        <th>Not Applicable Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="${containerId}-tbody"></tbody>
+            `;
+            container.appendChild(table);
+            const tbody = table.querySelector('tbody');
+
+            for (const feature of features) {
+                const attrs = feature.attributes;
+                const oid = attrs.OBJECTID;
+                const id = attrs[layer.idField];
+                const dcs = attrs.DCS_SCORE;
+                const rating = getDcsRating(dcs);
+                const dcsClass = getDcsClass(dcs);
+                const isCompliant = attrs.PROWAG_COMPLIANT === 1;
+                const workDate = attrs.work_status_date
+                    ? new Date(attrs.work_status_date).toLocaleDateString()
+                    : '-';
+                const reason = attrs.not_applicable_reason;
+
+                const prowagHtml = isCompliant
+                    ? '<span class="prowag-status prowag-compliant">Compliant</span>'
+                    : '<span class="prowag-status prowag-non-compliant">Non-Compliant</span>';
+
+                const reasonHtml = reason
+                    ? `<span class="reason-cell">${reason}</span>`
+                    : '<span class="reason-cell empty">No reason provided</span>';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td id="photo-${layer.index}-${oid}"><span class="no-photo">...</span></td>
+                    <td><strong>${id}</strong></td>
+                    <td>
+                        <span class="dcs-badge ${dcsClass}">
+                            ${dcs !== null && dcs !== undefined ? dcs.toFixed(1) : 'N/A'} (${rating})
+                        </span>
+                    </td>
+                    <td>${prowagHtml}</td>
+                    <td class="date-cell">${workDate}</td>
+                    <td>${reasonHtml}</td>
+                `;
+                tbody.appendChild(row);
+
+                // Load photo link asynchronously (non-blocking)
+                fetchAttachments(layer.index, oid).then(attachments => {
+                    const photoCell = document.getElementById(`photo-${layer.index}-${oid}`);
+                    if (photoCell) {
+                        photoCell.innerHTML = attachments.length > 0
+                            ? `<a href="${getAttachmentUrl(layer.index, oid, attachments[0].id)}" class="photo-link" target="_blank">View Photo</a>`
+                            : '<span class="no-photo">No Photo</span>';
+                    }
+                });
+            }
+        }
+
+        async function generateReport() {
+            try {
+                let totalCount = 0;
+
+                for (const layer of LAYERS) {
+                    console.log(`Fetching ${layer.name}...`);
+                    const features = await fetchNotApplicableFeatures(layer);
+                    const count = features.length;
+                    totalCount += count;
+
+                    // Update stat boxes and section headers
+                    document.getElementById(`${layer.sectionId}-count`).textContent = count;
+                    document.getElementById(`${layer.sectionId}-header-count`).textContent = `${count} items`;
+
+                    // Render table
+                    renderLayerTable(layer, features, `${layer.sectionId}-content`);
+                }
+
+                document.getElementById('total-count').textContent = totalCount;
+
+                const now = new Date();
+                document.getElementById('report-date').textContent = `Generated: ${now.toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                })} at ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+            } catch (err) {
+                console.error('Report error:', err);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error-message').textContent = err.message;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        generateReport();
+    </script>
+</body>
+</html>

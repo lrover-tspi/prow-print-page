@@ -112,6 +112,10 @@
             background: #e2e8f0;
             color: #2d3748;
         }
+        .section-header.needs-analysis {
+            background: #bee3f8;
+            color: #2c5282;
+        }
         .layer-group {
             border-top: 2px solid #e9ecef;
             padding: 20px;
@@ -278,6 +282,10 @@
                         <div class="value" id="in-progress-count">0</div>
                     </div>
                     <div class="stat-box">
+                        <div class="label">Needs Analysis</div>
+                        <div class="value" id="needs-analysis-count">0</div>
+                    </div>
+                    <div class="stat-box">
                         <div class="label">Complete</div>
                         <div class="value" id="complete-count">0</div>
                     </div>
@@ -304,6 +312,15 @@
                     <span class="collapse-icon">▼</span>
                 </div>
                 <div id="in-progress-content"></div>
+            </div>
+
+            <div id="needs-analysis-section" class="work-status-section">
+                <div class="section-header needs-analysis" onclick="toggleSection('needs-analysis')">
+                    🔍 NEEDS ANALYSIS
+                    <span id="needs-analysis-header-count" style="font-weight: normal;"></span>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div id="needs-analysis-content"></div>
             </div>
 
             <div id="complete-section" class="work-status-section">
@@ -345,9 +362,9 @@
         // No feature limit - fetch all items (compliant + non-compliant)
 
         const LAYERS = [
-            { name: 'Sidewalks', index: 0, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date' },
-            { name: 'Crosswalks', index: 1, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date' },
-            { name: 'Curb Ramps', index: 2, idField: 'c_path_id', fields: 'OBJECTID,c_path_id,DCS_SCORE,PROWAG_COMPLIANT,PROWAG_COMPLIANT_LOG,work_status,work_status_date' }
+            { name: 'Sidewalks', index: 0, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date,not_applicable_reason' },
+            { name: 'Crosswalks', index: 1, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date,not_applicable_reason' },
+            { name: 'Curb Ramps', index: 2, idField: 'c_path_id', fields: 'OBJECTID,c_path_id,DCS_SCORE,PROWAG_COMPLIANT,PROWAG_COMPLIANT_LOG,work_status,work_status_date,not_applicable_reason' }
         ];
 
         function getDcsRating(score) {
@@ -454,6 +471,7 @@
             const groups = {
                 unassigned: [],
                 'in-progress': [],
+                'needs-analysis': [],
                 complete: [],
                 'not-applicable': []
             };
@@ -462,6 +480,8 @@
                 const status = feature.attributes.work_status;
                 if (status === 'In Progress') {
                     groups['in-progress'].push(feature);
+                } else if (status === 'Needs Analysis') {
+                    groups['needs-analysis'].push(feature);
                 } else if (status === 'Complete') {
                     groups.complete.push(feature);
                 } else if (status === 'Not Applicable') {
@@ -474,7 +494,7 @@
             return groups;
         }
 
-        async function renderLayerGroup(layer, features, containerId) {
+        async function renderLayerGroup(layer, features, containerId, showReason = false) {
             if (features.length === 0) return;
 
             const container = document.getElementById(containerId);
@@ -497,6 +517,7 @@
                         <th>PROWAG Status</th>
                         <th>Issues</th>
                         <th>Work Status Update Date</th>
+                        ${showReason ? '<th>Not Applicable Reason</th>' : ''}
                     </tr>
                 </thead>
                 <tbody id="${containerId}-${layer.name}-tbody"></tbody>
@@ -538,6 +559,7 @@
                     <td>${prowagStatusHtml}</td>
                     <td>${issuesHtml}</td>
                     <td>${workDate}</td>
+                    ${showReason ? `<td style="color:#4a5568; font-style:italic; max-width:300px;">${attrs.not_applicable_reason || '<span style="color:#a0aec0;">—</span>'}</td>` : ''}
                 `;
                 tbody.appendChild(row);
 
@@ -560,12 +582,14 @@
                 let totalCount = 0;
                 let unassignedCount = 0;
                 let inProgressCount = 0;
+                let needsAnalysisCount = 0;
                 let completeCount = 0;
                 let notApplicableCount = 0;
 
                 const allGroups = {
                     unassigned: {},
                     'in-progress': {},
+                    'needs-analysis': {},
                     complete: {},
                     'not-applicable': {}
                 };
@@ -578,12 +602,14 @@
 
                     allGroups.unassigned[layer.name] = { layer, features: groups.unassigned };
                     allGroups['in-progress'][layer.name] = { layer, features: groups['in-progress'] };
+                    allGroups['needs-analysis'][layer.name] = { layer, features: groups['needs-analysis'] };
                     allGroups.complete[layer.name] = { layer, features: groups.complete };
                     allGroups['not-applicable'][layer.name] = { layer, features: groups['not-applicable'] };
 
                     totalCount += features.length;
                     unassignedCount += groups.unassigned.length;
                     inProgressCount += groups['in-progress'].length;
+                    needsAnalysisCount += groups['needs-analysis'].length;
                     completeCount += groups.complete.length;
                     notApplicableCount += groups['not-applicable'].length;
                 }
@@ -592,10 +618,12 @@
                 document.getElementById('total-count').textContent = totalCount;
                 document.getElementById('unassigned-count').textContent = unassignedCount;
                 document.getElementById('in-progress-count').textContent = inProgressCount;
+                document.getElementById('needs-analysis-count').textContent = needsAnalysisCount;
                 document.getElementById('complete-count').textContent = completeCount;
                 document.getElementById('not-applicable-count').textContent = notApplicableCount;
                 document.getElementById('unassigned-header-count').textContent = `${unassignedCount} items`;
                 document.getElementById('in-progress-header-count').textContent = `${inProgressCount} items`;
+                document.getElementById('needs-analysis-header-count').textContent = `${needsAnalysisCount} items`;
                 document.getElementById('complete-header-count').textContent = `${completeCount} items`;
                 document.getElementById('not-applicable-header-count').textContent = `${notApplicableCount} items`;
 
@@ -608,8 +636,9 @@
                 for (const layer of LAYERS) {
                     await renderLayerGroup(layer, allGroups.unassigned[layer.name].features, 'unassigned-content');
                     await renderLayerGroup(layer, allGroups['in-progress'][layer.name].features, 'in-progress-content');
+                    await renderLayerGroup(layer, allGroups['needs-analysis'][layer.name].features, 'needs-analysis-content');
                     await renderLayerGroup(layer, allGroups.complete[layer.name].features, 'complete-content');
-                    await renderLayerGroup(layer, allGroups['not-applicable'][layer.name].features, 'not-applicable-content');
+                    await renderLayerGroup(layer, allGroups['not-applicable'][layer.name].features, 'not-applicable-content', true);
                 }
 
                 // Show content

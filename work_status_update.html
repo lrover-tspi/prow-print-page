@@ -206,6 +206,33 @@
             cursor: not-allowed;
         }
 
+        .reason-group {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .reason-group.visible {
+            display: block;
+        }
+
+        textarea#notApplicableReason {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 90px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        textarea#notApplicableReason:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -316,11 +343,20 @@
                     <button type="button" class="status-btn" data-value="Complete">
                         ✅ Complete
                     </button>
+                    <button type="button" class="status-btn" data-value="Needs Analysis">
+                        🔍 Needs Analysis
+                    </button>
                     <button type="button" class="status-btn" data-value="Not Applicable">
                         ⊘ Not Applicable
                     </button>
                 </div>
                 <input type="hidden" id="workStatus" required>
+            </div>
+
+            <div class="form-group reason-group" id="reasonGroup">
+                <label for="notApplicableReason">Reason for Not Applicable <span style="color:#e53e3e;">*</span></label>
+                <textarea id="notApplicableReason" placeholder="Provide justification for why this item is not applicable..."></textarea>
+                <p class="hint">This reason will appear in the Not Applicable report for audit purposes.</p>
             </div>
 
             <button type="submit" class="submit-btn" id="submitBtn">
@@ -382,6 +418,14 @@
                 this.classList.add('selected');
                 selectedStatus = this.dataset.value;
                 document.getElementById('workStatus').value = selectedStatus;
+                // Show reason field only for Not Applicable
+                const reasonGroup = document.getElementById('reasonGroup');
+                if (selectedStatus === 'Not Applicable') {
+                    reasonGroup.classList.add('visible');
+                } else {
+                    reasonGroup.classList.remove('visible');
+                    document.getElementById('notApplicableReason').value = '';
+                }
             });
         });
 
@@ -414,8 +458,8 @@
 
                 // Request appropriate fields based on layer
                 const outFields = layerIndex === '2'
-                    ? 'OBJECTID,c_path_id,PROWAG_COMPLIANT,DCS_SCORE,work_status'
-                    : 'OBJECTID,segment_id,PROWAG_COMPLIANT,DCS_SCORE,work_status';
+                    ? 'OBJECTID,c_path_id,PROWAG_COMPLIANT,DCS_SCORE,work_status,not_applicable_reason'
+                    : 'OBJECTID,segment_id,PROWAG_COMPLIANT,DCS_SCORE,work_status,not_applicable_reason';
 
                 const params = new URLSearchParams({
                     where: whereClause,
@@ -459,6 +503,13 @@
                 return;
             }
 
+            const reason = document.getElementById('notApplicableReason').value.trim();
+            if (selectedStatus === 'Not Applicable' && !reason) {
+                showMessage('Please provide a reason for marking this item as Not Applicable.', 'error');
+                document.getElementById('notApplicableReason').focus();
+                return;
+            }
+
             const layerIndex = document.getElementById('layerType').value;
             const layerUrl = `${FEATURE_SERVICE_URL}/${layerIndex}`;
 
@@ -466,11 +517,18 @@
             showMessage('Updating feature...', 'info');
 
             try {
+                // Compute effective_compliant: 1 if NA, otherwise restore PROWAG_COMPLIANT
+                const effectiveCompliant = selectedStatus === 'Not Applicable'
+                    ? 1
+                    : (selectedFeature.attributes.PROWAG_COMPLIANT || 0);
+
                 const updates = [{
                     attributes: {
                         OBJECTID: selectedFeature.attributes.OBJECTID,
                         work_status: selectedStatus,
-                        work_status_date: new Date().getTime()
+                        work_status_date: new Date().getTime(),
+                        effective_compliant: effectiveCompliant,
+                        not_applicable_reason: selectedStatus === 'Not Applicable' ? reason : null
                     }
                 }];
 
@@ -491,6 +549,7 @@
                     // Reset form after 2 seconds
                     setTimeout(() => {
                         document.getElementById('updateForm').reset();
+                        document.getElementById('reasonGroup').classList.remove('visible');
                         selectedFeature = null;
                         selectedStatus = null;
                         document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
@@ -515,6 +574,7 @@
             const compliance = attributes.PROWAG_COMPLIANT === 1 ? 'Compliant' : 'Non-Compliant';
             const score = attributes.DCS_SCORE ? attributes.DCS_SCORE.toFixed(1) : 'N/A';
             const currentStatus = attributes.work_status || 'Not set';
+            const existingReason = attributes.not_applicable_reason;
 
             info.innerHTML = `
                 <h3>Feature Details</h3>
@@ -522,6 +582,7 @@
                 <p><strong>PROWAG Status:</strong> ${compliance}</p>
                 <p><strong>DCS Score:</strong> ${score}</p>
                 <p><strong>Current Work Status:</strong> ${currentStatus}</p>
+                ${existingReason ? `<p><strong>Not Applicable Reason:</strong> ${existingReason}</p>` : ''}
             `;
             info.style.display = 'block';
         }
@@ -592,7 +653,9 @@
                     attributes: {
                         OBJECTID: selectedFeature.attributes.OBJECTID,
                         work_status: null,
-                        work_status_date: null
+                        work_status_date: null,
+                        effective_compliant: selectedFeature.attributes.PROWAG_COMPLIANT || 0,
+                        not_applicable_reason: null
                     }
                 }];
 
@@ -613,12 +676,15 @@
                     // Update displayed feature info
                     selectedFeature.attributes.work_status = null;
                     selectedFeature.attributes.work_status_date = null;
+                    selectedFeature.attributes.not_applicable_reason = null;
                     showFeatureInfo(selectedFeature.attributes, layerIndex);
 
-                    // Clear status button selection
+                    // Clear status button selection and hide reason field
                     selectedStatus = null;
                     document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
                     document.getElementById('workStatus').value = '';
+                    document.getElementById('reasonGroup').classList.remove('visible');
+                    document.getElementById('notApplicableReason').value = '';
                 } else {
                     const errorMsg = result.updateResults?.[0]?.error?.description || 'Unknown error';
                     showMessage(`Failed to reset: ${errorMsg}`, 'error');
