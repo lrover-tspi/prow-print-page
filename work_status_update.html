@@ -354,9 +354,9 @@
             </div>
 
             <div class="form-group reason-group" id="reasonGroup">
-                <label for="notApplicableReason">Reason for Not Applicable <span style="color:#e53e3e;">*</span></label>
-                <textarea id="notApplicableReason" placeholder="Provide justification for why this item is not applicable..."></textarea>
-                <p class="hint">This reason will appear in the Not Applicable report for audit purposes.</p>
+                <label for="notApplicableReason" id="reasonLabel">Notes / Reason</label>
+                <textarea id="notApplicableReason" placeholder="Enter notes or reason..."></textarea>
+                <p class="hint" id="reasonHint">Add any relevant notes for this status.</p>
             </div>
 
             <button type="submit" class="submit-btn" id="submitBtn">
@@ -418,10 +418,20 @@
                 this.classList.add('selected');
                 selectedStatus = this.dataset.value;
                 document.getElementById('workStatus').value = selectedStatus;
-                // Show reason field only for Not Applicable
+                // Show reason field for Not Applicable and Needs Analysis
                 const reasonGroup = document.getElementById('reasonGroup');
+                const reasonLabel = document.getElementById('reasonLabel');
+                const reasonHint = document.getElementById('reasonHint');
                 if (selectedStatus === 'Not Applicable') {
                     reasonGroup.classList.add('visible');
+                    reasonLabel.innerHTML = 'Reason for Not Applicable <span style="color:#e53e3e;">*</span>';
+                    document.getElementById('notApplicableReason').placeholder = 'Provide justification for why this item is not applicable...';
+                    reasonHint.textContent = 'Required. This reason will appear in the Not Applicable report for audit purposes.';
+                } else if (selectedStatus === 'Needs Analysis') {
+                    reasonGroup.classList.add('visible');
+                    reasonLabel.innerHTML = 'Notes / Analysis Notes';
+                    document.getElementById('notApplicableReason').placeholder = 'Describe what analysis is needed or any relevant observations...';
+                    reasonHint.textContent = 'Optional. These notes will appear in the Needs Analysis section of reports.';
                 } else {
                     reasonGroup.classList.remove('visible');
                     document.getElementById('notApplicableReason').value = '';
@@ -509,6 +519,7 @@
                 document.getElementById('notApplicableReason').focus();
                 return;
             }
+            // Needs Analysis: reason is optional, no validation required
 
             const layerIndex = document.getElementById('layerType').value;
             const layerUrl = `${FEATURE_SERVICE_URL}/${layerIndex}`;
@@ -528,7 +539,7 @@
                         work_status: selectedStatus,
                         work_status_date: new Date().getTime(),
                         effective_compliant: effectiveCompliant,
-                        not_applicable_reason: selectedStatus === 'Not Applicable' ? reason : null
+                        not_applicable_reason: (selectedStatus === 'Not Applicable' || selectedStatus === 'Needs Analysis') ? reason : null
                     }
                 }];
 
@@ -582,9 +593,15 @@
                 <p><strong>PROWAG Status:</strong> ${compliance}</p>
                 <p><strong>DCS Score:</strong> ${score}</p>
                 <p><strong>Current Work Status:</strong> ${currentStatus}</p>
-                ${existingReason ? `<p><strong>Not Applicable Reason:</strong> ${existingReason}</p>` : ''}
+                ${existingReason && currentStatus === 'Not Applicable' ? `<p><strong>Not Applicable Reason:</strong> ${existingReason}</p>` : ''}
+                ${existingReason && currentStatus === 'Needs Analysis' ? `<p><strong>Analysis Notes:</strong> ${existingReason}</p>` : ''}
             `;
             info.style.display = 'block';
+
+            // Pre-fill reason textarea if feature already has notes for these statuses
+            if (existingReason && (currentStatus === 'Not Applicable' || currentStatus === 'Needs Analysis')) {
+                document.getElementById('notApplicableReason').value = existingReason;
+            }
         }
 
         function hideFeatureInfo() {

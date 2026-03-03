@@ -494,7 +494,7 @@
             return groups;
         }
 
-        async function renderLayerGroup(layer, features, containerId, showReason = false) {
+        async function renderLayerGroup(layer, features, containerId, reasonLabel = null) {
             if (features.length === 0) return;
 
             const container = document.getElementById(containerId);
@@ -517,7 +517,7 @@
                         <th>PROWAG Status</th>
                         <th>Issues</th>
                         <th>Work Status Update Date</th>
-                        ${showReason ? '<th>Not Applicable Reason</th>' : ''}
+                        ${reasonLabel ? `<th>${reasonLabel}</th>` : ''}
                     </tr>
                 </thead>
                 <tbody id="${containerId}-${layer.name}-tbody"></tbody>
@@ -559,7 +559,7 @@
                     <td>${prowagStatusHtml}</td>
                     <td>${issuesHtml}</td>
                     <td>${workDate}</td>
-                    ${showReason ? `<td style="color:#4a5568; font-style:italic; max-width:300px;">${attrs.not_applicable_reason || '<span style="color:#a0aec0;">—</span>'}</td>` : ''}
+                    ${reasonLabel ? `<td style="color:#4a5568; font-style:italic; max-width:300px;">${attrs.not_applicable_reason || '<span style="color:#a0aec0;">—</span>'}</td>` : ''}
                 `;
                 tbody.appendChild(row);
 
@@ -636,9 +636,9 @@
                 for (const layer of LAYERS) {
                     await renderLayerGroup(layer, allGroups.unassigned[layer.name].features, 'unassigned-content');
                     await renderLayerGroup(layer, allGroups['in-progress'][layer.name].features, 'in-progress-content');
-                    await renderLayerGroup(layer, allGroups['needs-analysis'][layer.name].features, 'needs-analysis-content');
+                    await renderLayerGroup(layer, allGroups['needs-analysis'][layer.name].features, 'needs-analysis-content', 'Analysis Notes');
                     await renderLayerGroup(layer, allGroups.complete[layer.name].features, 'complete-content');
-                    await renderLayerGroup(layer, allGroups['not-applicable'][layer.name].features, 'not-applicable-content', true);
+                    await renderLayerGroup(layer, allGroups['not-applicable'][layer.name].features, 'not-applicable-content', 'Not Applicable Reason');
                 }
 
                 // Show content
