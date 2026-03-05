@@ -306,6 +306,31 @@
         .modal-btn-confirm:hover {
             background: #c53030;
         }
+
+        .modal-btn-success {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .modal-btn-success:hover {
+            opacity: 0.9;
+        }
+
+        .modal-success-icon {
+            font-size: 40px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .modal-status-badge {
+            display: inline-block;
+            background: #ebf4ff;
+            color: #2b6cb0;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-weight: 700;
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
@@ -367,6 +392,18 @@
                 🔄 Reset Status to Blank
             </button>
         </form>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-success-icon">✅</div>
+            <div class="modal-header" style="text-align:center;">Status Updated!</div>
+            <div class="modal-body" id="successModalBody" style="text-align:center;"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-success" onclick="closeSuccessModal()">Update Another</button>
+            </div>
+        </div>
     </div>
 
     <!-- Confirmation Modal -->
@@ -555,18 +592,7 @@
                 const result = await response.json();
 
                 if (result.updateResults && result.updateResults[0].success) {
-                    showMessage('✓ Status updated successfully!', 'success');
-
-                    // Reset form after 2 seconds
-                    setTimeout(() => {
-                        document.getElementById('updateForm').reset();
-                        document.getElementById('reasonGroup').classList.remove('visible');
-                        selectedFeature = null;
-                        selectedStatus = null;
-                        document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
-                        hideFeatureInfo();
-                        hideMessage();
-                    }, 2000);
+                    showSuccessModal(selectedStatus, layerIndex);
                 } else {
                     const errorMsg = result.updateResults?.[0]?.error?.description || 'Unknown error';
                     showMessage(`Failed to update: ${errorMsg}`, 'error');
@@ -576,6 +602,36 @@
                 showMessage('Error updating feature. Please try again.', 'error');
             } finally {
                 document.getElementById('submitBtn').disabled = false;
+            }
+        });
+
+        function showSuccessModal(status, layerIndex) {
+            const idField = layerIndex === '2'
+                ? selectedFeature.attributes.c_path_id
+                : selectedFeature.attributes.segment_id;
+            const body = document.getElementById('successModalBody');
+            body.innerHTML = `
+                Feature <strong>${idField}</strong> was set to:<br><br>
+                <span class="modal-status-badge">${status}</span>
+            `;
+            document.getElementById('successModal').classList.add('show');
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.remove('show');
+            document.getElementById('updateForm').reset();
+            document.getElementById('reasonGroup').classList.remove('visible');
+            selectedFeature = null;
+            selectedStatus = null;
+            document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+            hideFeatureInfo();
+            hideMessage();
+        }
+
+        // Close success modal when clicking outside
+        document.getElementById('successModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSuccessModal();
             }
         });
 
