@@ -362,9 +362,10 @@
         // No feature limit - fetch all items (compliant + non-compliant)
 
         const LAYERS = [
-            { name: 'Sidewalks', index: 0, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date,not_applicable_reason' },
-            { name: 'Crosswalks', index: 1, idField: 'segment_id', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date,not_applicable_reason' },
-            { name: 'Curb Ramps', index: 2, idField: 'c_path_id', fields: 'OBJECTID,c_path_id,DCS_SCORE,PROWAG_COMPLIANT,PROWAG_COMPLIANT_LOG,work_status,work_status_date,not_applicable_reason' }
+            { name: 'Sidewalks', index: 0, idField: 'segment_id', complianceField: 'PROWAG_COMPLIANT', dcsField: 'DCS_SCORE', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date,not_applicable_reason' },
+            { name: 'Crosswalks', index: 1, idField: 'segment_id', complianceField: 'PROWAG_COMPLIANT', dcsField: 'DCS_SCORE', fields: 'OBJECTID,segment_id,DCS_SCORE,PROWAG_COMPLIANT,RUN_SLOPE,X_SLOPE,VERT_OFFSET,TRAVEL_PATH_WIDTH,work_status,work_status_date,not_applicable_reason' },
+            // University campus filter: DWS (Detectable Warning Surfaces) not required — use DWS-excluded fields
+            { name: 'Curb Ramps', index: 2, idField: 'c_path_id', complianceField: 'prowag_excl_dws', dcsField: 'dcs_excl_dws', fields: 'OBJECTID,c_path_id,DCS_SCORE,dcs_excl_dws,PROWAG_COMPLIANT,prowag_excl_dws,PROWAG_COMPLIANT_LOG,work_status,work_status_date,not_applicable_reason' }
         ];
 
         function getDcsRating(score) {
@@ -401,6 +402,8 @@
                     factors.push(`Vertical Displacement: ${Math.abs(attrs.VERT_OFFSET).toFixed(2)} in (max 0.25 in)`);
                 }
             } else if (layerName === 'Curb Ramps') {
+                // University campus filter: exclude DWS categories from displayed issues
+                const DWS_CATEGORIES = new Set(['Has DWS color contrasting', 'DWS Dimensions']);
                 const log = attrs.PROWAG_COMPLIANT_LOG || '';
                 const lines = log.split('\n');
                 for (const line of lines) {
@@ -408,7 +411,10 @@
                         const start = line.indexOf('Final ') + 6;
                         const end = line.indexOf(' score:');
                         if (start > 5 && end > start) {
-                            factors.push(line.substring(start, end));
+                            const category = line.substring(start, end);
+                            if (!DWS_CATEGORIES.has(category)) {
+                                factors.push(category);
+                            }
                         }
                     }
                 }
@@ -444,7 +450,7 @@
                     where: '1=1', // All features
                     outFields: layer.fields,
                     returnGeometry: false,
-                    orderByFields: 'DCS_SCORE ASC',
+                    orderByFields: `${layer.dcsField} ASC`,
                     resultOffset: offset,
                     resultRecordCount: batchSize,
                     f: 'json'
@@ -532,10 +538,10 @@
                 const attrs = feature.attributes;
                 const oid = attrs.OBJECTID;
                 const id = attrs[layer.idField];
-                const dcs = attrs.DCS_SCORE;
+                const dcs = attrs[layer.dcsField];
                 const rating = getDcsRating(dcs);
                 const dcsClass = getDcsClass(dcs);
-                const isCompliant = attrs.PROWAG_COMPLIANT === 1;
+                const isCompliant = attrs[layer.complianceField] === 1;
                 const factors = getNonCompliantFactors(attrs, layer.name);
                 const workDate = attrs.work_status_date ? new Date(attrs.work_status_date).toLocaleDateString() : '-';
 
